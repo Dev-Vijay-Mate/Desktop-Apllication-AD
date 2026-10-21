@@ -1,0 +1,9 @@
+{
+  "name": "myathena",
+  "version": "1.0.0",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^44.9.3"
+  }
+}
