@@ -1,0 +1,77 @@
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--athena-color-page);
+  font-family: var(--athena-font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+
+  background: var(--athena-color-page);
+  color: var(--athena-color-text);
+
+  font-family: var(--athena-font-family);
+  font-size: var(--athena-font-size-md);
+  line-height: 1.5;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+
+  border: 0;
+  text-align: initial;
+}
+
+/* Keep form controls consistent with the application's typography. */
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+/* Make keyboard focus visible. */
+:focus-visible {
+  outline: 3px solid #78a8d0;
+  outline-offset: 3px;
+}
+
+/* Use predictable link behavior if links are added later. */
+a {
+  color: inherit;
+}
+
+/* Avoid accidental horizontal overflow on smaller windows. */
+img,
+video,
+canvas {
+  max-width: 100%;
+}
+
+/* Respect the user's system animation preferences. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

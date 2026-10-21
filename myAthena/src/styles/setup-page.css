@@ -1,0 +1,533 @@
+/* =========================
+   Page layout
+========================= */
+
+.preflight-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+
+  display: flex;
+  justify-content: center;
+
+  padding: var(--athena-page-padding);
+
+  background: var(--athena-color-page);
+}
+
+.preflight-shell {
+  width: 100%;
+  max-width: var(--athena-content-width);
+
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+
+  gap: var(--athena-space-8);
+
+  margin: auto 0;
+}
+
+/* =========================
+   Greeting
+========================= */
+
+.preflight-greeting {
+  text-align: center;
+  padding: 0 var(--athena-space-2);
+}
+
+.preflight-greeting h1 {
+  margin: 0 0 var(--athena-space-2);
+
+  color: var(--athena-color-text);
+
+  font-size: var(--athena-font-size-heading);
+  font-weight: 650;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+}
+
+.preflight-greeting p {
+  max-width: 560px;
+  margin: 0 auto;
+
+  color: var(--athena-color-text-muted);
+  font-size: var(--athena-font-size-md);
+  line-height: 1.7;
+}
+
+/* =========================
+   Main permission panel
+========================= */
+
+.preflight-panel {
+  width: 100%;
+
+  overflow: hidden;
+
+  background: var(--athena-color-surface);
+
+  border: 1px solid var(--athena-color-border);
+  border-radius: var(--athena-radius-card);
+
+  box-shadow: var(--athena-shadow-card);
+}
+
+.permission-divider {
+  height: 1px;
+  margin: 0 var(--athena-space-8);
+
+  background: var(--athena-color-border);
+}
+
+/* =========================
+   Reusable permission card
+========================= */
+
+.permission-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+
+  gap: var(--athena-space-4);
+
+  min-width: 0;
+
+  padding: clamp(1.25rem, 3.5vw, 2.25rem);
+}
+
+.permission-card__header {
+  display: flex;
+  align-items: flex-start;
+
+  gap: var(--athena-space-4);
+  min-width: 0;
+}
+
+.permission-card__icon {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: var(--athena-color-surface-muted);
+  border: 1px solid var(--athena-color-border);
+  border-radius: 14px;
+
+  color: var(--athena-color-text);
+
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.permission-card__copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.permission-card__title {
+  margin: 0 0 var(--athena-space-2);
+
+  color: var(--athena-color-text);
+
+  font-size: var(--athena-font-size-xl);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+
+.permission-card__description {
+  margin: 0;
+
+  color: var(--athena-color-text-muted);
+
+  font-size: var(--athena-font-size-sm);
+  line-height: 1.7;
+}
+
+/* =========================
+   Status indicators
+========================= */
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  padding: 0.35rem 0.7rem;
+
+  border-radius: var(--athena-radius-pill);
+
+  font-size: var(--athena-font-size-xs);
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.status-pill--neutral {
+  background: var(--athena-color-neutral-bg);
+  color: var(--athena-color-text-muted);
+}
+
+.status-pill--success {
+  background: var(--athena-color-success-bg);
+  color: var(--athena-color-success);
+}
+
+.status-pill--warning {
+  background: var(--athena-color-warning-bg);
+  color: var(--athena-color-warning);
+}
+
+.status-pill--danger {
+  background: var(--athena-color-danger-bg);
+  color: var(--athena-color-danger);
+}
+
+/* =========================
+   Camera preview
+========================= */
+
+.camera-preview {
+  width: 100%;
+  max-width: 360px;
+}
+
+.camera-preview__video {
+  display: block;
+
+  width: 100%;
+  aspect-ratio: 16 / 9;
+
+  object-fit: cover;
+
+  background: #202421;
+  border: 1px solid var(--athena-color-border);
+  border-radius: var(--athena-radius-control);
+}
+
+.camera-preview__caption {
+  margin: var(--athena-space-2) 0 0;
+
+  color: var(--athena-color-text-muted);
+  font-size: var(--athena-font-size-xs);
+}
+
+.camera-placeholder {
+  width: 100%;
+  max-width: 360px;
+  min-height: 90px;
+
+  display: flex;
+  align-items: center;
+  gap: var(--athena-space-3);
+
+  padding: var(--athena-space-4);
+
+  background: var(--athena-color-surface-muted);
+  border: 1px dashed var(--athena-color-border-strong);
+  border-radius: var(--athena-radius-control);
+
+  color: var(--athena-color-text-muted);
+  font-size: var(--athena-font-size-sm);
+}
+
+.camera-placeholder__icon {
+  flex: 0 0 auto;
+  font-size: 1.35rem;
+}
+
+/* =========================
+   Supporting messages
+========================= */
+
+.permission-card__message,
+.setup-notice {
+  margin: 0;
+
+  border-radius: var(--athena-radius-control);
+
+  padding: var(--athena-space-3) var(--athena-space-4);
+
+  font-size: var(--athena-font-size-sm);
+  line-height: 1.65;
+}
+
+.permission-card__message--error {
+  background: var(--athena-color-danger-bg);
+  color: var(--athena-color-danger);
+}
+
+.permission-card__message--info {
+  background: var(--athena-color-surface-muted);
+  color: var(--athena-color-text-muted);
+}
+
+.setup-notice {
+  border: 1px solid transparent;
+}
+
+.setup-notice--warning {
+  background: var(--athena-color-warning-bg);
+  color: var(--athena-color-warning);
+  border-color: #f0dfb8;
+}
+
+.setup-notice--success {
+  background: var(--athena-color-success-bg);
+  color: var(--athena-color-success);
+  border-color: #cee8d7;
+}
+
+/* =========================
+   Buttons
+========================= */
+
+.preflight-page .button {
+  min-height: 44px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: var(--athena-space-2);
+
+  padding: 0.75rem 1.25rem;
+
+  border: 1px solid transparent;
+  border-radius: var(--athena-radius-control);
+
+  font-size: var(--athena-font-size-sm);
+  font-weight: 650;
+  line-height: 1.3;
+
+  text-align: center;
+  text-decoration: none;
+
+  cursor: pointer;
+
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.preflight-page .button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.preflight-page .button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.preflight-page .button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.preflight-page .button--primary {
+  background: var(--athena-color-primary);
+  color: var(--athena-color-primary-text);
+}
+
+.preflight-page .button--primary:hover:not(:disabled) {
+  background: var(--athena-color-primary-hover);
+}
+
+.preflight-page .button--soft {
+  background: var(--athena-color-accent);
+  color: var(--athena-color-accent-text);
+}
+
+.preflight-page .button--soft:hover:not(:disabled) {
+  background: var(--athena-color-accent-hover);
+}
+
+.preflight-page .button--outline {
+  background: transparent;
+  border-color: var(--athena-color-border-strong);
+  color: var(--athena-color-text);
+}
+
+.preflight-page .button--outline:hover:not(:disabled) {
+  background: var(--athena-color-surface-muted);
+}
+
+.permission-card__actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.permission-card__actions .button {
+  max-width: 100%;
+}
+
+/* =========================
+   Bottom actions
+========================= */
+
+.preflight-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  flex-wrap: wrap;
+  gap: var(--athena-space-3);
+}
+
+.preflight-actions .button {
+  min-width: 150px;
+}
+
+/* =========================
+   Rules and help dialog
+========================= */
+
+.rules-dialog {
+  width: min(520px, calc(100vw - 2rem));
+  max-height: min(80dvh, 720px);
+
+  overflow-y: auto;
+
+  margin: auto;
+  padding: 0;
+
+  color: var(--athena-color-text);
+  background: var(--athena-color-surface);
+
+  border: 1px solid var(--athena-color-border);
+  border-radius: 16px;
+
+  box-shadow: var(--athena-shadow-dialog);
+}
+
+.rules-dialog::backdrop {
+  background: rgb(21 25 22 / 42%);
+  backdrop-filter: blur(2px);
+}
+
+.rules-dialog__content {
+  padding: clamp(1.25rem, 4vw, 2rem);
+}
+
+.rules-dialog__eyebrow {
+  margin: 0 0 var(--athena-space-2);
+
+  color: var(--athena-color-text-muted);
+  font-size: var(--athena-font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.rules-dialog__title {
+  margin: 0 0 var(--athena-space-3);
+
+  font-size: var(--athena-font-size-xl);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.35;
+}
+
+.rules-dialog__description {
+  margin: 0 0 var(--athena-space-5);
+
+  color: var(--athena-color-text-muted);
+  font-size: var(--athena-font-size-sm);
+  line-height: 1.7;
+}
+
+.rules-dialog__list {
+  display: grid;
+  gap: var(--athena-space-3);
+
+  margin: 0 0 var(--athena-space-6);
+  padding-left: 1.3rem;
+
+  color: var(--athena-color-text);
+  font-size: var(--athena-font-size-sm);
+  line-height: 1.7;
+}
+
+.rules-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+
+  gap: var(--athena-space-3);
+  padding-top: var(--athena-space-4);
+
+  border-top: 1px solid var(--athena-color-border);
+}
+
+/* =========================
+   Responsive layout
+========================= */
+
+@media (max-width: 640px) {
+  .preflight-shell {
+    gap: var(--athena-space-6);
+  }
+
+  .preflight-greeting h1 {
+    font-size: 1.8rem;
+  }
+
+  .preflight-greeting p {
+    font-size: var(--athena-font-size-sm);
+  }
+
+  .permission-card__header {
+    flex-wrap: wrap;
+  }
+
+  .permission-card__icon {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+
+  .permission-card__copy {
+    flex-basis: calc(100% - 58px);
+  }
+
+  .permission-card__title {
+    font-size: var(--athena-font-size-lg);
+  }
+
+  .status-pill {
+    margin-left: 58px;
+  }
+
+  .permission-card__actions,
+  .permission-card__actions .button {
+    width: 100%;
+  }
+
+  .permission-divider {
+    margin: 0 var(--athena-space-4);
+  }
+
+  .preflight-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .preflight-actions .button {
+    width: 100%;
+  }
+
+  .rules-dialog__actions {
+    flex-direction: column-reverse;
+  }
+
+  .rules-dialog__actions .button {
+    width: 100%;
+  }
+}
