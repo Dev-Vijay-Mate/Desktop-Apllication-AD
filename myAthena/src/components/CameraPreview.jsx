@@ -10,11 +10,8 @@ function CameraPreview({ stream }) {
       return undefined;
     }
 
-    // Connect the real MediaStream to the video element.
     videoElement.srcObject = stream ?? null;
 
-    // Remove the old element's reference when the stream changes
-    // or the component unmounts. The hook owns stopping the tracks.
     return () => {
       if (videoElement.srcObject === stream) {
         videoElement.srcObject = null;
@@ -55,7 +52,7 @@ function CameraPreview({ stream }) {
       />
 
       <p className="camera-preview__caption">
-        Live camera preview. Athena is not recording video in
+        Live camera preview. Athena does not record video in
         this setup phase.
       </p>
     </div>

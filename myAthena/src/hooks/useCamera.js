@@ -6,7 +6,7 @@ function getCameraErrorMessage(error) {
     case "PermissionDeniedError":
       return (
         "Camera access was denied. Allow camera access in the " +
-        "permission prompt or your macOS privacy settings, then try again."
+        "permission prompt or macOS privacy settings, then try again."
       );
 
     case "NotFoundError":
@@ -29,8 +29,7 @@ function getCameraErrorMessage(error) {
 
     case "SecurityError":
       return (
-        "The application is not allowed to access the camera in " +
-        "its current environment."
+        "Camera access is blocked in the current application environment."
       );
 
     default:
@@ -58,6 +57,7 @@ function useCamera() {
 
   const streamRef = useRef(null);
   const mountedRef = useRef(false);
+  const requestInProgressRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -65,35 +65,35 @@ function useCamera() {
     return () => {
       mountedRef.current = false;
 
-      // Stop the real camera tracks when the hook's component
-      // unmounts.
+      // Stop the actual hardware stream on unmount.
       stopMediaStream(streamRef.current);
-
       streamRef.current = null;
     };
   }, []);
 
   async function requestCamera() {
-    setError("");
+    if (requestInProgressRef.current) {
+      return;
+    }
 
     if (!navigator.mediaDevices?.getUserMedia) {
       setStatus("error");
-
       setError(
-        "Camera access is unavailable. Open Athena through Electron " +
-        "or a supported secure browser context, and try again."
+        "Camera access is unavailable in this environment. " +
+        "Run Athena through Electron or a supported secure context."
       );
-
       return;
     }
 
-    if (status === "requesting") {
-      return;
-    }
+    requestInProgressRef.current = true;
 
     setStatus("requesting");
+    setError("");
 
     try {
+      /*
+       * Request video only. The microphone is not requested.
+       */
       const newStream =
         await navigator.mediaDevices.getUserMedia({
           video: {
@@ -102,19 +102,19 @@ function useCamera() {
           audio: false,
         });
 
-      // If the component was removed while the permission prompt
-      // was open, do not leave the newly acquired camera running.
+      /*
+       * A permission prompt might finish after this component
+       * has already been unmounted. Stop the new stream in that case.
+       */
       if (!mountedRef.current) {
         stopMediaStream(newStream);
         return;
       }
 
-      // Stop any previously owned stream before replacing it.
+      // Release an old stream before replacing it.
       stopMediaStream(streamRef.current);
 
       streamRef.current = newStream;
-      setStream(newStream);
-      setStatus("ready");
 
       newStream.getVideoTracks().forEach((track) => {
         track.addEventListener(
@@ -133,12 +133,15 @@ function useCamera() {
 
             setError(
               "The camera stream ended. Check the camera connection " +
-              "and grant access again."
+              "or permissions and try again."
             );
           },
           { once: true }
         );
       });
+
+      setStream(newStream);
+      setStatus("ready");
     } catch (cameraError) {
       if (!mountedRef.current) {
         return;
@@ -146,6 +149,26 @@ function useCamera() {
 
       setStatus("error");
       setError(getCameraErrorMessage(cameraError));
+    } finally {
+      requestInProgressRef.current = false;
+    }
+  }
+
+  /*
+   * Stop the current stream explicitly when needed.
+   */
+  function stopCamera() {
+    const currentStream = streamRef.current;
+
+    // Clear the reference before stopping tracks, avoiding stale events.
+    streamRef.current = null;
+
+    stopMediaStream(currentStream);
+
+    if (mountedRef.current) {
+      setStream(null);
+      setStatus("idle");
+      setError("");
     }
   }
 
@@ -154,6 +177,7 @@ function useCamera() {
     status,
     error,
     requestCamera,
+    stopCamera,
   };
 }
 
