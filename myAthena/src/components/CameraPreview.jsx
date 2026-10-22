@@ -33,7 +33,7 @@ function CameraPreview({ stream }) {
         </span>
 
         <span>
-          Your live camera preview will appear here after
+          The live camera preview will appear here after
           camera access is granted.
         </span>
       </div>
@@ -52,8 +52,8 @@ function CameraPreview({ stream }) {
       />
 
       <p className="camera-preview__caption">
-        Live camera preview. Athena does not record video in
-        this setup phase.
+        Live camera preview. This implementation does not
+        record or upload video.
       </p>
     </div>
   );

@@ -2,13 +2,10 @@ import { useEffect, useRef, useState } from "react";
 
 import PermissionCard from "../components/PermissionCard.jsx";
 import CameraPreview from "../components/CameraPreview.jsx";
-import useCamera from "../hooks/useCamera.js";
 
 import "../styles/setup-page.css";
 
-function PreflightPage({ onStartExam }) {
-  const camera = useCamera();
-
+function PreflightPage({ onStartExam, camera }) {
   const [fullscreenStatus, setFullscreenStatus] =
     useState("idle");
 
@@ -20,41 +17,51 @@ function PreflightPage({ onStartExam }) {
 
   const dialogRef = useRef(null);
 
-  /*
-   * Subscribe to fullscreen changes and read the initial state.
-   */
+  const cameraStatus = camera?.status ?? "idle";
+  const cameraStream = camera?.stream ?? null;
+  const cameraError = camera?.error ?? "";
+
+  const isCameraReady =
+    cameraStatus === "ready" &&
+    Boolean(cameraStream) &&
+    cameraStream.getVideoTracks().some(
+      (track) => track.readyState === "live"
+    );
+
+  const setupReady =
+    isCameraReady && fullscreenStatus === "ready";
+
   useEffect(() => {
     let active = true;
+    let unsubscribe = () => {};
 
     const electronAPI = window.electronAPI;
 
     if (
       typeof electronAPI?.onFullscreenChanged === "function"
     ) {
-      const unsubscribe = electronAPI.onFullscreenChanged(
-        (isFullscreen) => {
+      const removeListener =
+        electronAPI.onFullscreenChanged((isFullscreen) => {
           if (!active) {
             return;
           }
 
           if (isFullscreen) {
             setFullscreenStatus("ready");
-
             setFullscreenMessage(
               "Electron confirmed that fullscreen mode is active."
             );
           } else {
             setFullscreenStatus("idle");
-
             setFullscreenMessage(
-              "Fullscreen is not active. Enable it before starting the examination."
+              "Fullscreen is not active. Enable it before continuing."
             );
           }
-        }
-      );
+        });
 
-      // Save the cleanup function on the effect instance.
-      cleanupSubscription = unsubscribe;
+      if (typeof removeListener === "function") {
+        unsubscribe = removeListener;
+      }
     }
 
     if (
@@ -66,15 +73,13 @@ function PreflightPage({ onStartExam }) {
             return;
           }
 
-          if (isFullscreen) {
+          if (isFullscreen === true) {
             setFullscreenStatus("ready");
-
             setFullscreenMessage(
               "Electron confirmed that fullscreen mode is active."
             );
           } else {
             setFullscreenStatus("idle");
-
             setFullscreenMessage(
               "Fullscreen has not been enabled yet."
             );
@@ -86,14 +91,12 @@ function PreflightPage({ onStartExam }) {
           }
 
           setFullscreenStatus("error");
-
           setFullscreenMessage(
             "Athena could not read the fullscreen state from Electron."
           );
         });
     } else {
       setFullscreenStatus("unavailable");
-
       setFullscreenMessage(
         "The Electron fullscreen bridge is unavailable."
       );
@@ -101,18 +104,10 @@ function PreflightPage({ onStartExam }) {
 
     return () => {
       active = false;
-
-      if (typeof cleanupSubscription === "function") {
-        cleanupSubscription();
-      }
+      unsubscribe();
     };
-
-    // This effect subscribes once for this page instance.
   }, []);
 
-  /*
-   * Keep the native HTML dialog synchronized with React state.
-   */
   useEffect(() => {
     const dialog = dialogRef.current;
 
@@ -134,39 +129,34 @@ function PreflightPage({ onStartExam }) {
 
     if (typeof electronAPI?.setFullScreen !== "function") {
       setFullscreenStatus("unavailable");
-
       setFullscreenMessage(
         "The Electron fullscreen API is unavailable."
       );
-
       return;
     }
 
     setFullscreenStatus("checking");
-
     setFullscreenMessage(
       "Waiting for Electron to confirm fullscreen mode."
     );
 
     try {
-      const confirmed = await electronAPI.setFullScreen(true);
+      const confirmed =
+        await electronAPI.setFullScreen(true);
 
       if (confirmed === true) {
         setFullscreenStatus("ready");
-
         setFullscreenMessage(
           "Electron confirmed that fullscreen mode is active."
         );
       } else {
         setFullscreenStatus("unavailable");
-
         setFullscreenMessage(
-          "Fullscreen could not be confirmed. Try again."
+          "Fullscreen could not be confirmed. Please try again."
         );
       }
     } catch (error) {
       setFullscreenStatus("error");
-
       setFullscreenMessage(
         error?.message ||
         "An error occurred while requesting fullscreen."
@@ -194,9 +184,8 @@ function PreflightPage({ onStartExam }) {
       setPageNotice({
         tone: "warning",
         message:
-          "Camera access is no longer ready. Enable your camera before continuing.",
+          "Camera access is not ready. Enable your camera before continuing.",
       });
-
       return;
     }
 
@@ -206,46 +195,27 @@ function PreflightPage({ onStartExam }) {
         message:
           "Fullscreen is not active. Enable fullscreen before continuing.",
       });
-
       return;
     }
 
     if (typeof onStartExam === "function") {
       onStartExam();
-      return;
     }
-
-    setPageNotice({
-      tone: "success",
-      message:
-        "Setup checks are complete. Exam navigation has not been connected in this phase.",
-    });
   }
-
-  const isCameraReady =
-    camera.status === "ready" &&
-    Boolean(camera.stream) &&
-    camera.stream.getVideoTracks().some(
-      (track) => track.readyState === "live"
-    );
-
-  const setupReady =
-    isCameraReady &&
-    fullscreenStatus === "ready";
 
   const cameraStatusLabel = {
     idle: "Not configured",
     requesting: "Requesting access",
     ready: "Camera connected",
     error: "Needs attention",
-  }[camera.status];
+  }[cameraStatus] ?? "Not configured";
 
   const cameraStatusTone = {
     idle: "neutral",
     requesting: "warning",
     ready: "success",
     error: "danger",
-  }[camera.status];
+  }[cameraStatus] ?? "neutral";
 
   const fullscreenStatusLabel = {
     idle: "Not confirmed",
@@ -253,7 +223,7 @@ function PreflightPage({ onStartExam }) {
     ready: "Fullscreen active",
     unavailable: "Not confirmed",
     error: "Needs attention",
-  }[fullscreenStatus];
+  }[fullscreenStatus] ?? "Not confirmed";
 
   const fullscreenStatusTone = {
     idle: "neutral",
@@ -261,7 +231,7 @@ function PreflightPage({ onStartExam }) {
     ready: "success",
     unavailable: "warning",
     error: "danger",
-  }[fullscreenStatus];
+  }[fullscreenStatus] ?? "neutral";
 
   return (
     <main className="preflight-page">
@@ -284,35 +254,35 @@ function PreflightPage({ onStartExam }) {
             icon="◉"
             title="Configure Camera"
             description={
-              "Allow camera access and make sure your camera " +
+              "Allow camera access and check that the camera " +
               "is working before beginning the examination."
             }
             status={cameraStatusLabel}
             statusTone={cameraStatusTone}
             actionLabel={
-              camera.status === "requesting"
+              cameraStatus === "requesting"
                 ? "Requesting Camera..."
-                : camera.status === "ready"
+                : cameraStatus === "ready"
                   ? "Camera Connected"
-                  : camera.status === "error"
+                  : cameraStatus === "error"
                     ? "Try Again"
                     : "Get Camera Access"
             }
             actionVariant="primary"
             actionDisabled={
-              camera.status === "requesting" ||
-              camera.status === "ready"
+              cameraStatus === "requesting" ||
+              cameraStatus === "ready"
             }
-            onAction={camera.requestCamera}
+            onAction={() => camera?.requestCamera?.()}
           >
-            <CameraPreview stream={camera.stream} />
+            <CameraPreview stream={cameraStream} />
 
-            {camera.error && (
+            {cameraError && (
               <p
                 className="permission-card__message permission-card__message--error"
                 role="alert"
               >
-                {camera.error}
+                {cameraError}
               </p>
             )}
           </PermissionCard>
@@ -328,7 +298,7 @@ function PreflightPage({ onStartExam }) {
             title="Switch to Full Screen"
             description={
               "Enter fullscreen mode for your examination. " +
-              "Athena verifies the actual Electron window state."
+              "Athena checks the actual Electron window state."
             }
             status={fullscreenStatusLabel}
             statusTone={fullscreenStatusTone}
@@ -347,7 +317,9 @@ function PreflightPage({ onStartExam }) {
             onAction={requestFullscreen}
             supportingMessage={fullscreenMessage}
             supportingMessageTone={
-              fullscreenStatus === "error" ? "error" : "info"
+              fullscreenStatus === "error"
+                ? "error"
+                : "info"
             }
           />
         </section>
@@ -420,29 +392,21 @@ function PreflightPage({ onStartExam }) {
                 </h2>
 
                 <p className="rules-dialog__description">
-                  Please review these requirements before
-                  proceeding to your examination.
+                  Review these requirements before proceeding.
                 </p>
 
                 <ol className="rules-dialog__list">
                   <li>
-                    Keep your camera enabled throughout the
-                    examination.
+                    Keep your camera enabled during the examination.
                   </li>
-
                   <li>
-                    Remain in fullscreen mode when required
-                    by the examination.
+                    Remain in fullscreen mode as required.
                   </li>
-
                   <li>
-                    Do not use unauthorized applications or
-                    external assistance.
+                    Do not use unauthorized applications or assistance.
                   </li>
-
                   <li>
-                    Submit your answers before the examination
-                    deadline.
+                    Submit your answers before the deadline.
                   </li>
                 </ol>
 
@@ -478,24 +442,20 @@ function PreflightPage({ onStartExam }) {
                 </h2>
 
                 <p className="rules-dialog__description">
-                  Try these steps if you cannot complete the
-                  examination setup.
+                  Try these steps if you cannot complete setup.
                 </p>
 
                 <ol className="rules-dialog__list">
                   <li>
-                    Allow camera access when macOS displays
-                    the permission prompt.
+                    Allow camera access in the macOS permission prompt.
                   </li>
-
                   <li>
-                    If the camera does not work, check macOS
-                    Privacy &amp; Security camera settings.
+                    Check macOS Privacy &amp; Security settings if the
+                    camera is unavailable.
                   </li>
-
                   <li>
-                    If fullscreen cannot be confirmed, check
-                    the Electron main process and preload bridge.
+                    If fullscreen is not confirmed, check the Electron
+                    main process and preload bridge.
                   </li>
                 </ol>
 
