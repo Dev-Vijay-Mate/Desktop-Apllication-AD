@@ -180,5 +180,5 @@ export async function submitExam({
 
     message:
       "Demonstration result calculated locally. No answers were sent to a server.",
- };
+  };
 }
