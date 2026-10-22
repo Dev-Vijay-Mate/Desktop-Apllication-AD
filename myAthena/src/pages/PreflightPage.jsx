@@ -13,16 +13,105 @@ function PreflightPage({ onStartExam }) {
     useState("idle");
 
   const [fullscreenMessage, setFullscreenMessage] =
-    useState("");
+    useState("Fullscreen has not been confirmed.");
 
   const [pageNotice, setPageNotice] = useState(null);
-
   const [dialogMode, setDialogMode] = useState(null);
 
   const dialogRef = useRef(null);
 
   /*
-   * Open and close the built-in HTML dialog based on React state.
+   * Subscribe to fullscreen changes and read the initial state.
+   */
+  useEffect(() => {
+    let active = true;
+
+    const electronAPI = window.electronAPI;
+
+    if (
+      typeof electronAPI?.onFullscreenChanged === "function"
+    ) {
+      const unsubscribe = electronAPI.onFullscreenChanged(
+        (isFullscreen) => {
+          if (!active) {
+            return;
+          }
+
+          if (isFullscreen) {
+            setFullscreenStatus("ready");
+
+            setFullscreenMessage(
+              "Electron confirmed that fullscreen mode is active."
+            );
+          } else {
+            setFullscreenStatus("idle");
+
+            setFullscreenMessage(
+              "Fullscreen is not active. Enable it before starting the examination."
+            );
+          }
+        }
+      );
+
+      // Save the cleanup function on the effect instance.
+      cleanupSubscription = unsubscribe;
+    }
+
+    if (
+      typeof electronAPI?.getFullScreenState === "function"
+    ) {
+      electronAPI.getFullScreenState()
+        .then((isFullscreen) => {
+          if (!active) {
+            return;
+          }
+
+          if (isFullscreen) {
+            setFullscreenStatus("ready");
+
+            setFullscreenMessage(
+              "Electron confirmed that fullscreen mode is active."
+            );
+          } else {
+            setFullscreenStatus("idle");
+
+            setFullscreenMessage(
+              "Fullscreen has not been enabled yet."
+            );
+          }
+        })
+        .catch(() => {
+          if (!active) {
+            return;
+          }
+
+          setFullscreenStatus("error");
+
+          setFullscreenMessage(
+            "Athena could not read the fullscreen state from Electron."
+          );
+        });
+    } else {
+      setFullscreenStatus("unavailable");
+
+      setFullscreenMessage(
+        "The Electron fullscreen bridge is unavailable."
+      );
+    }
+
+    return () => {
+      active = false;
+
+      if (typeof cleanupSubscription === "function") {
+        cleanupSubscription();
+      }
+    };
+
+    // This effect subscribes once for this page instance.
+  }, []);
+
+  /*
+   * Keep the native HTML dialog synchronized with React state.
    */
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -38,15 +127,8 @@ function PreflightPage({ onStartExam }) {
     }
   }, [dialogMode]);
 
-  /*
-   * Ask Electron to enter fullscreen through the exposed preload API.
-   *
-   * The interface reports success only if the main process
-   * explicitly confirms that fullscreen is active.
-   */
   async function requestFullscreen() {
     setPageNotice(null);
-    setFullscreenMessage("");
 
     const electronAPI = window.electronAPI;
 
@@ -54,8 +136,7 @@ function PreflightPage({ onStartExam }) {
       setFullscreenStatus("unavailable");
 
       setFullscreenMessage(
-        "Fullscreen integration is not available. The Electron " +
-        "preload bridge must expose setFullScreen()."
+        "The Electron fullscreen API is unavailable."
       );
 
       return;
@@ -63,10 +144,14 @@ function PreflightPage({ onStartExam }) {
 
     setFullscreenStatus("checking");
 
-    try {
-      const result = await electronAPI.setFullScreen();
+    setFullscreenMessage(
+      "Waiting for Electron to confirm fullscreen mode."
+    );
 
-      if (result === true) {
+    try {
+      const confirmed = await electronAPI.setFullScreen(true);
+
+      if (confirmed === true) {
         setFullscreenStatus("ready");
 
         setFullscreenMessage(
@@ -76,16 +161,15 @@ function PreflightPage({ onStartExam }) {
         setFullscreenStatus("unavailable");
 
         setFullscreenMessage(
-          "Electron did not confirm fullscreen mode. Athena has " +
-          "not marked this requirement as complete."
+          "Fullscreen could not be confirmed. Try again."
         );
       }
-    } catch (fullscreenError) {
+    } catch (error) {
       setFullscreenStatus("error");
 
       setFullscreenMessage(
-        fullscreenError?.message ||
-        "Fullscreen could not be activated. Please try again."
+        error?.message ||
+        "An error occurred while requesting fullscreen."
       );
     }
   }
@@ -99,24 +183,18 @@ function PreflightPage({ onStartExam }) {
     setDialogMode("help");
   }
 
-  function cancelDialog() {
+  function closeDialog() {
     setDialogMode(null);
   }
 
-  /*
-   * The rules can be accepted even if setup is incomplete.
-   * However, the application must not begin the examination
-   * until its camera and fullscreen requirements are confirmed.
-   */
   function acceptRules() {
     setDialogMode(null);
 
-    if (camera.status !== "ready" || !camera.stream) {
+    if (!isCameraReady) {
       setPageNotice({
         tone: "warning",
         message:
-          "The rules were accepted, but camera access is not ready. " +
-          "Enable your camera before continuing.",
+          "Camera access is no longer ready. Enable your camera before continuing.",
       });
 
       return;
@@ -126,9 +204,7 @@ function PreflightPage({ onStartExam }) {
       setPageNotice({
         tone: "warning",
         message:
-          "The rules were accepted, but fullscreen mode has not " +
-          "been confirmed by Electron. Athena cannot continue until " +
-          "fullscreen integration is working.",
+          "Fullscreen is not active. Enable fullscreen before continuing.",
       });
 
       return;
@@ -142,10 +218,20 @@ function PreflightPage({ onStartExam }) {
     setPageNotice({
       tone: "success",
       message:
-        "The setup checks are complete. Exam navigation has not " +
-        "been connected in this phase.",
+        "Setup checks are complete. Exam navigation has not been connected in this phase.",
     });
   }
+
+  const isCameraReady =
+    camera.status === "ready" &&
+    Boolean(camera.stream) &&
+    camera.stream.getVideoTracks().some(
+      (track) => track.readyState === "live"
+    );
+
+  const setupReady =
+    isCameraReady &&
+    fullscreenStatus === "ready";
 
   const cameraStatusLabel = {
     idle: "Not configured",
@@ -176,10 +262,6 @@ function PreflightPage({ onStartExam }) {
     unavailable: "warning",
     error: "danger",
   }[fullscreenStatus];
-
-  const fullscreenDescription =
-    fullscreenMessage ||
-    "Athena will mark fullscreen as ready only after Electron confirms it.";
 
   return (
     <main className="preflight-page">
@@ -235,15 +317,18 @@ function PreflightPage({ onStartExam }) {
             )}
           </PermissionCard>
 
-          <div className="permission-divider" aria-hidden="true" />
+          <div
+            className="permission-divider"
+            aria-hidden="true"
+          />
 
           <PermissionCard
             id="fullscreen"
             icon="⛶"
             title="Switch to Full Screen"
             description={
-              "Use fullscreen mode during your examination " +
-              "to keep the test interface clearly visible."
+              "Enter fullscreen mode for your examination. " +
+              "Athena verifies the actual Electron window state."
             }
             status={fullscreenStatusLabel}
             statusTone={fullscreenStatusTone}
@@ -260,7 +345,7 @@ function PreflightPage({ onStartExam }) {
               fullscreenStatus === "ready"
             }
             onAction={requestFullscreen}
-            supportingMessage={fullscreenDescription}
+            supportingMessage={fullscreenMessage}
             supportingMessageTone={
               fullscreenStatus === "error" ? "error" : "info"
             }
@@ -285,6 +370,12 @@ function PreflightPage({ onStartExam }) {
             type="button"
             className="button button--primary"
             onClick={openRulesDialog}
+            disabled={!setupReady}
+            title={
+              setupReady
+                ? "Review the examination rules"
+                : "Enable the camera and confirm fullscreen first"
+            }
           >
             Go To Test
           </button>
@@ -308,7 +399,7 @@ function PreflightPage({ onStartExam }) {
           }
           onCancel={(event) => {
             event.preventDefault();
-            cancelDialog();
+            closeDialog();
           }}
           onClose={() => {
             setDialogMode(null);
@@ -350,8 +441,8 @@ function PreflightPage({ onStartExam }) {
                   </li>
 
                   <li>
-                    Follow your examination instructions and
-                    submit your answers before finishing.
+                    Submit your answers before the examination
+                    deadline.
                   </li>
                 </ol>
 
@@ -359,7 +450,7 @@ function PreflightPage({ onStartExam }) {
                   <button
                     type="button"
                     className="button button--outline"
-                    onClick={cancelDialog}
+                    onClick={closeDialog}
                   >
                     Cancel
                   </button>
@@ -398,14 +489,13 @@ function PreflightPage({ onStartExam }) {
                   </li>
 
                   <li>
-                    If the camera does not work, check your
-                    macOS camera privacy settings.
+                    If the camera does not work, check macOS
+                    Privacy &amp; Security camera settings.
                   </li>
 
                   <li>
-                    If fullscreen cannot be confirmed, the
-                    Electron fullscreen integration needs
-                    to be configured.
+                    If fullscreen cannot be confirmed, check
+                    the Electron main process and preload bridge.
                   </li>
                 </ol>
 
@@ -413,7 +503,7 @@ function PreflightPage({ onStartExam }) {
                   <button
                     type="button"
                     className="button button--primary"
-                    onClick={cancelDialog}
+                    onClick={closeDialog}
                   >
                     Close
                   </button>
