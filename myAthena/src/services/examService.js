@@ -2,7 +2,14 @@ import {
   demoQuestions,
   DEMO_EXAM_TITLE,
   DEMO_EXAM_DURATION_SECONDS,
+  DEMO_EXAM_POLICY,
 } from "../data/demoQuestions.js";
+
+const ALLOWED_AUDIT_EVENT_TYPES = new Set([
+  "fullscreen-exited",
+  "fullscreen-restored",
+  "fullscreen-not-active-at-exam-start",
+]);
 
 function validateQuestions(questions) {
   if (!Array.isArray(questions)) {
@@ -82,7 +89,7 @@ function validateQuestions(questions) {
       !seenOptionIds.has(question.correctAnswerId)
     ) {
       throw new Error(
-        `Question "${question.id}" has an invalid demonstration answer key.`
+        `Question "${question.id}" has an invalid demo answer key.`
       );
     }
 
@@ -95,39 +102,63 @@ function validateQuestions(questions) {
   });
 }
 
+function normalizeAuditEvents(events, policy) {
+  if (
+    !policy?.recordFullscreenInterruptions ||
+    !Array.isArray(events)
+  ) {
+    return [];
+  }
+
+  return events.filter((event) => {
+    return (
+      event &&
+      ALLOWED_AUDIT_EVENT_TYPES.has(event.type) &&
+      typeof event.occurredAt === "string" &&
+      Number.isFinite(Date.parse(event.occurredAt))
+    );
+  }).map((event) => ({
+    type: event.type,
+    occurredAt: new Date(event.occurredAt).toISOString(),
+  }));
+}
+
 /**
- * Load the local demonstration examination.
+ * Load a demonstration exam from the local question bank.
  *
- * This function does not contact a backend.
- * Its Promise-based interface allows the page to use async/await
- * consistently with a future real service implementation.
+ * This function does not contact a server.
  */
 export async function loadExam() {
   const questions = validateQuestions(demoQuestions);
 
   return {
+    id: "athena-demo-exam",
     title: DEMO_EXAM_TITLE,
     durationSeconds: DEMO_EXAM_DURATION_SECONDS,
     source: "demo",
+    policy: { ...DEMO_EXAM_POLICY },
     questions,
   };
 }
 
 /**
- * Process the demonstration answers locally.
+ * Process an exam submission using the local demo data.
  *
- * No network request is made, and no server persistence occurs.
+ * No server request is made. Backend exams must use a separately
+ * configured service and must not be reported as confirmed by this one.
  */
 export async function submitExam({
   exam,
   answers,
   startedAt,
   submittedAt,
-  reason,
+  reason = "manual",
+  fullscreenEvents = [],
 }) {
-  if (!exam || exam.source !== "demo") {
+  if (exam?.source !== "demo") {
     throw new Error(
-      "The local demonstration service only processes demo examinations."
+      "No real backend submission service is configured. " +
+      "The examination was not sent to or confirmed by a server."
     );
   }
 
@@ -147,9 +178,13 @@ export async function submitExam({
     throw new Error("The answer collection is invalid.");
   }
 
-  const answeredCount = questions.filter(
-    (question) => Boolean(answers[question.id])
-  ).length;
+  const answeredQuestions = questions.filter((question) =>
+    question.options.some(
+      (option) => option.id === answers[question.id]
+    )
+  );
+
+  const answeredCount = answeredQuestions.length;
 
   const unansweredCount = questions.length - answeredCount;
 
@@ -162,11 +197,27 @@ export async function submitExam({
     (correctCount / questions.length) * 100
   );
 
+  const auditEvents = normalizeAuditEvents(
+    fullscreenEvents,
+    exam.policy
+  );
+
+  const fullscreenInterruptionCount = auditEvents.filter(
+    (event) =>
+      event.type === "fullscreen-exited" ||
+      event.type === "fullscreen-not-active-at-exam-start"
+  ).length;
+
   return {
+    examId: exam.id,
     examTitle: exam.title,
+
     source: "demo",
     persistence: "local-only",
+    submissionStatus: "local-demo",
+    serverConfirmed: false,
     savedToServer: false,
+    submissionId: null,
 
     totalQuestions: questions.length,
     answeredCount,
@@ -176,9 +227,15 @@ export async function submitExam({
 
     startedAt: startedAt ?? null,
     submittedAt: submittedAt ?? new Date().toISOString(),
-    reason: reason ?? "manual",
+    reason,
+
+    fullscreenEvents: auditEvents,
+    fullscreenInterruptionCount,
+
+    policy: { ...exam.policy },
 
     message:
-      "Demonstration result calculated locally. No answers were sent to a server.",
+      "This is a local demonstration result. No answers were " +
+      "sent to or saved by a server.",
   };
 }

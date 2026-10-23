@@ -2,6 +2,10 @@ export const DEMO_EXAM_TITLE = "Athena Demonstration Examination";
 
 export const DEMO_EXAM_DURATION_SECONDS = 20 * 60;
 
+export const DEMO_EXAM_POLICY = Object.freeze({
+  recordFullscreenInterruptions: true,
+});
+
 export const demoQuestions = [
   {
     id: "q1",
