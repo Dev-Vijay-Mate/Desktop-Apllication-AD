@@ -8,6 +8,7 @@ function ExamHeader({
   source = "demo",
   onSubmit,
   isSubmitting = false,
+  submissionError = "",
 }) {
   const formattedTime = formatTime(remainingSeconds);
 
@@ -79,9 +80,13 @@ function ExamHeader({
           type="button"
           className="button button--danger"
           onClick={onSubmit}
-          disabled={isSubmitting || isExpired}
+          disabled={isSubmitting}
         >
-          {isSubmitting ? "Submitting..." : "Submit Exam"}
+          {isSubmitting
+            ? "Submitting..."
+            : submissionError
+              ? "Retry Submission"
+              : "Submit Exam"}
         </button>
       </div>
     </header>

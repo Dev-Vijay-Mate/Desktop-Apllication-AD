@@ -8,17 +8,16 @@ function formatTime(totalSeconds) {
 
   const safeSeconds = Math.max(0, Math.floor(totalSeconds));
 
-  // Round remaining minutes upward so a positive countdown
-  // does not display 00:00 before the timer actually expires.
+  // Round upward so a positive countdown never displays 00:00 early.
   const totalMinutes = Math.ceil(safeSeconds / 60);
 
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 
-  const formattedHours = String(hours).padStart(2, "0");
-  const formattedMinutes = String(minutes).padStart(2, "0");
-
-  return `${formattedHours}:${formattedMinutes}`;
+  return [
+    String(hours).padStart(2, "0"),
+    String(minutes).padStart(2, "0"),
+  ].join(":");
 }
 
 export default formatTime;

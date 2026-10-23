@@ -22,6 +22,30 @@ import {
 
 import "../styles/exam-page.css";
 
+function getFullscreenEventMessage(type, time) {
+  const formattedTime = new Date(time).toLocaleTimeString();
+
+  if (type === "fullscreen-exited") {
+    return (
+      `Fullscreen was exited at ${formattedTime}. ` +
+      "This event is recorded for review; an interruption alone " +
+      "does not establish misconduct."
+    );
+  }
+
+  if (type === "fullscreen-restored") {
+    return (
+      `Fullscreen was restored at ${formattedTime}. ` +
+      "The restoration was recorded in the exam audit."
+    );
+  }
+
+  return (
+    `Fullscreen was not active when exam monitoring began at ${formattedTime}. ` +
+    "This is an operational record, not a finding of misconduct."
+  );
+}
+
 function ExamPage({
   onComplete,
   onReturnToSetup,
@@ -39,41 +63,58 @@ function ExamPage({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
-  const [submissionResult, setSubmissionResult] = useState(null);
+
+  const [fullscreenEvents, setFullscreenEvents] = useState([]);
+  const [fullscreenNotice, setFullscreenNotice] = useState("");
 
   const submissionLockRef = useRef(false);
   const submissionHandlerRef = useRef(null);
   const startedAtRef = useRef(null);
+  const fullscreenEventsRef = useRef([]);
 
-  /*
-   * This stable callback allows the timer to request submission
-   * without capturing outdated answers from an earlier render.
-   */
   const handleTimerExpiration = useCallback(() => {
     if (submissionHandlerRef.current) {
       void submissionHandlerRef.current("time-expired");
     }
   }, []);
 
-  /*
-   * This is the only timer instance owned by the exam page.
-   */
-  const timer = useExamTimer({
+  const {
+    remainingSeconds,
+    isRunning,
+    start: startTimer,
+    stop: stopTimer,
+    reset: resetTimer,
+  } = useExamTimer({
     durationSeconds,
     onExpire: handleTimerExpiration,
   });
 
   /*
-   * Load the exam through the service layer.
+   * Load the exam from the service. Cleanup prevents an old
+   * asynchronous load from updating an unmounted component.
    */
   useEffect(() => {
     let cancelled = false;
+
+    stopTimer();
+    resetTimer(durationSeconds);
 
     async function initialiseExam() {
       setLoadStatus("loading");
       setLoadError("");
       setSubmissionError("");
       setExam(null);
+
+      setAnswers({});
+      setCurrentIndex(0);
+      setIsSubmitting(false);
+
+      setFullscreenEvents([]);
+      fullscreenEventsRef.current = [];
+      setFullscreenNotice("");
+
+      submissionLockRef.current = false;
+      startedAtRef.current = null;
 
       try {
         const loadedExam = await loadExam();
@@ -92,23 +133,20 @@ function ExamPage({
         }
 
         setExam(loadedExam);
-        setAnswers({});
-        setCurrentIndex(0);
-        setSubmissionResult(null);
-        setIsSubmitting(false);
-
-        submissionLockRef.current = false;
-        startedAtRef.current = new Date().toISOString();
 
         if (loadedExam.questions.length === 0) {
           setLoadStatus("empty");
           return;
         }
 
+        startedAtRef.current = new Date().toISOString();
         setLoadStatus("ready");
 
-        // Begin the countdown only after questions have loaded.
-        timer.start();
+        resetTimer(
+          loadedExam.durationSeconds ?? durationSeconds
+        );
+
+        startTimer();
       } catch (error) {
         if (cancelled) {
           return;
@@ -127,48 +165,178 @@ function ExamPage({
 
     return () => {
       cancelled = true;
+      stopTimer();
     };
-  }, [loadAttempt, timer.start]);
+  }, [
+    loadAttempt,
+    durationSeconds,
+    resetTimer,
+    startTimer,
+    stopTimer,
+  ]);
 
   const questions = Array.isArray(exam?.questions)
     ? exam.questions
     : [];
 
   const totalQuestions = questions.length;
-
   const currentQuestion = questions[currentIndex] ?? null;
 
   const currentQuestionNumber =
     totalQuestions > 0 ? currentIndex + 1 : 0;
 
-  const answeredCount = questions.filter(
-    (question) => Boolean(answers[question.id])
+  const answeredCount = questions.filter((question) =>
+    question.options.some(
+      (option) => option.id === answers[question.id]
+    )
   ).length;
 
   const unansweredCount =
     totalQuestions - answeredCount;
 
+  const isCameraReady =
+    cameraStatus === "ready" &&
+    Boolean(cameraStream) &&
+    cameraStream.getVideoTracks().some(
+      (track) => track.readyState === "live"
+    );
+
   /*
-   * This function is shared by manual submission and automatic
-   * submission when the timer expires.
+   * Record fullscreen changes only while an exam is active and
+   * only when its configured policy enables the audit.
+   */
+  useEffect(() => {
+    if (
+      loadStatus !== "ready" ||
+      exam?.policy?.recordFullscreenInterruptions !== true
+    ) {
+      return undefined;
+    }
+
+    const electronAPI = window.electronAPI;
+
+    if (
+      typeof electronAPI?.onFullscreenChanged !== "function" ||
+      typeof electronAPI?.getFullScreenState !== "function"
+    ) {
+      setFullscreenNotice(
+        "Fullscreen interruption monitoring is unavailable in this environment."
+      );
+
+      return undefined;
+    }
+
+    let active = true;
+    let previousFullscreen = null;
+    let observedEvent = false;
+
+    function recordFullscreenEvent(type) {
+      if (!active || submissionLockRef.current) {
+        return;
+      }
+
+      const event = {
+        type,
+        occurredAt: new Date().toISOString(),
+      };
+
+      const updatedEvents = [
+        ...fullscreenEventsRef.current,
+        event,
+      ];
+
+      fullscreenEventsRef.current = updatedEvents;
+      setFullscreenEvents(updatedEvents);
+
+      setFullscreenNotice(
+        getFullscreenEventMessage(type, event.occurredAt)
+      );
+    }
+
+    const unsubscribe = electronAPI.onFullscreenChanged(
+      (isFullscreen) => {
+        if (!active) {
+          return;
+        }
+
+        observedEvent = true;
+
+        const nextFullscreen = isFullscreen === true;
+
+        if (
+          previousFullscreen === true &&
+          !nextFullscreen
+        ) {
+          recordFullscreenEvent("fullscreen-exited");
+        } else if (
+          previousFullscreen === false &&
+          nextFullscreen
+        ) {
+          recordFullscreenEvent("fullscreen-restored");
+        } else if (
+          previousFullscreen === null &&
+          !nextFullscreen
+        ) {
+          recordFullscreenEvent(
+            "fullscreen-not-active-at-exam-start"
+          );
+        }
+
+        previousFullscreen = nextFullscreen;
+      }
+    );
+
+    electronAPI.getFullScreenState()
+      .then((isFullscreen) => {
+        if (!active || observedEvent) {
+          return;
+        }
+
+        previousFullscreen = isFullscreen === true;
+
+        if (previousFullscreen === false) {
+          recordFullscreenEvent(
+            "fullscreen-not-active-at-exam-start"
+          );
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setFullscreenNotice(
+            "Athena could not verify fullscreen state for the exam audit."
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
+  }, [
+    loadStatus,
+    exam?.policy?.recordFullscreenInterruptions,
+  ]);
+
+  /*
+   * One submission handler serves manual submission and timer expiry.
    */
   async function performSubmission(reason) {
     if (
       submissionLockRef.current ||
       !exam ||
-      questions.length === 0 ||
-      submissionResult
+      questions.length === 0
     ) {
       return;
     }
 
-    // Lock synchronously before awaiting anything.
     submissionLockRef.current = true;
-
     setIsSubmitting(true);
     setSubmissionError("");
 
-    timer.stop();
+    stopTimer();
 
     try {
       const result = await submitExam({
@@ -177,22 +345,22 @@ function ExamPage({
         startedAt: startedAtRef.current,
         submittedAt: new Date().toISOString(),
         reason,
+        fullscreenEvents: fullscreenEventsRef.current,
       });
 
-      setSubmissionResult(result);
-      setIsSubmitting(false);
+      if (typeof onComplete !== "function") {
+        throw new Error(
+          "The result screen is not connected. " +
+          "The result could not be routed to the completion screen."
+        );
+      }
 
       /*
-       * App owns the camera and stops it after submission.
+       * The parent records the result, stops the camera and
+       * switches to ResultPage. The submission lock stays closed.
        */
-      if (typeof onComplete === "function") {
-        onComplete(result);
-      }
+      onComplete(result);
     } catch (error) {
-      /*
-       * Allow a retry if submission processing fails.
-       * A local demo submission makes no network request.
-       */
       submissionLockRef.current = false;
 
       setIsSubmitting(false);
@@ -202,28 +370,24 @@ function ExamPage({
         "The examination could not be processed. Please try again."
       );
 
-      // Resume the remaining time after a failed manual attempt.
-      // If time already expired, the student can retry submission.
+      /*
+       * Resume the timer after a failed manual attempt only
+       * when time remains. Expiry cannot restart the timer.
+       */
       if (
         reason !== "time-expired" &&
-        timer.remainingSeconds > 0
+        remainingSeconds > 0
       ) {
-        timer.start();
+        startTimer();
       }
     }
   }
 
-  /*
-   * Always point the timer to the latest submission function.
-   */
+  // The timer always calls the latest submission handler.
   submissionHandlerRef.current = performSubmission;
 
-  /*
-   * Store the answer against its question ID.
-   * Navigating between questions does not clear this object.
-   */
   function handleAnswerChange(questionId, optionId) {
-    if (isSubmitting || submissionResult) {
+    if (isSubmitting || submissionLockRef.current) {
       return;
     }
 
@@ -243,41 +407,35 @@ function ExamPage({
     );
   }
 
-  /*
-   * The automatic time-expiry path calls performSubmission()
-   * directly and does not ask for confirmation.
-   */
   function handleManualSubmit() {
-    if (
-      submissionLockRef.current ||
-      isSubmitting ||
-      submissionResult
-    ) {
+    if (submissionLockRef.current || isSubmitting) {
       return;
     }
 
-    const confirmationMessage =
+    /*
+     * If automatic expiry processing failed, let the student
+     * retry that operation rather than trapping them at zero.
+     */
+    if (
+      remainingSeconds <= 0 &&
+      submissionError
+    ) {
+      void performSubmission("time-expired");
+      return;
+    }
+
+    const message =
       unansweredCount > 0
         ? `You have ${unansweredCount} unanswered question(s). ` +
           "Are you sure you want to submit the examination?"
         : "Are you sure you want to submit your examination? " +
           "You cannot change your answers afterwards.";
 
-    const confirmed = window.confirm(
-      confirmationMessage
-    );
-
-    if (!confirmed) {
-      return;
+    if (window.confirm(message)) {
+      void performSubmission("manual");
     }
-
-    void performSubmission("manual");
   }
 
-  /*
-   * Loading and error states are shown instead of assuming
-   * that questions were successfully loaded.
-   */
   if (loadStatus === "loading") {
     return (
       <main className="exam-page">
@@ -304,10 +462,6 @@ function ExamPage({
       <main className="exam-page">
         <div className="exam-shell">
           <section className="exam-state-card">
-            <span className="exam-state-card__icon">
-              !
-            </span>
-
             <h1>Unable to load examination</h1>
 
             <p
@@ -347,15 +501,11 @@ function ExamPage({
       <main className="exam-page">
         <div className="exam-shell">
           <section className="exam-state-card">
-            <span className="exam-state-card__icon">
-              !
-            </span>
-
             <h1>No examination questions</h1>
 
             <p>
-              The question source is currently empty. Athena
-              cannot start an examination without questions.
+              The question source is empty. Athena cannot start an
+              examination without questions.
             </p>
 
             <div className="exam-state-card__actions">
@@ -383,85 +533,6 @@ function ExamPage({
     );
   }
 
-  /*
-   * Once the submission result is available, show a clear
-   * completion summary instead of the active question screen.
-   */
-  if (submissionResult) {
-    return (
-      <main className="exam-page">
-        <div className="exam-shell">
-          <section className="exam-completion-card">
-            <div className="exam-completion-card__icon">
-              ✓
-            </div>
-
-            <p className="exam-header__brand">ATHENA</p>
-
-            <h1>Examination completed</h1>
-
-            <p className="exam-completion-card__subtitle">
-              {submissionResult.examTitle}
-            </p>
-
-            <span className="exam-source-badge exam-source-badge--demo">
-              LOCAL DEMONSTRATION RESULT
-            </span>
-
-            <div className="exam-result-grid">
-              <div className="exam-result-metric">
-                <span>Total questions</span>
-                <strong>
-                  {submissionResult.totalQuestions}
-                </strong>
-              </div>
-
-              <div className="exam-result-metric">
-                <span>Answered</span>
-                <strong>
-                  {submissionResult.answeredCount}
-                </strong>
-              </div>
-
-              <div className="exam-result-metric">
-                <span>Unanswered</span>
-                <strong>
-                  {submissionResult.unansweredCount}
-                </strong>
-              </div>
-
-              <div className="exam-result-metric">
-                <span>Correct demo answers</span>
-                <strong>
-                  {submissionResult.correctCount}
-                </strong>
-              </div>
-
-              <div className="exam-result-metric">
-                <span>Demonstration score</span>
-                <strong>
-                  {submissionResult.scorePercentage}%
-                </strong>
-              </div>
-            </div>
-
-            <p className="exam-message exam-message--info">
-              {submissionResult.message}
-            </p>
-
-            <button
-              type="button"
-              className="button button--primary"
-              onClick={onReturnToSetup}
-            >
-              Return to Setup
-            </button>
-          </section>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="exam-page">
       <div className="exam-shell">
@@ -469,10 +540,11 @@ function ExamPage({
           title={exam.title}
           currentQuestionNumber={currentQuestionNumber}
           totalQuestions={totalQuestions}
-          remainingSeconds={timer.remainingSeconds}
+          remainingSeconds={remainingSeconds}
           source={exam.source}
           onSubmit={handleManualSubmit}
           isSubmitting={isSubmitting}
+          submissionError={submissionError}
         />
 
         {submissionError && (
@@ -481,6 +553,15 @@ function ExamPage({
             role="alert"
           >
             {submissionError}
+          </p>
+        )}
+
+        {fullscreenNotice && (
+          <p
+            className="exam-message exam-message--info exam-policy-notice"
+            role="status"
+          >
+            {fullscreenNotice}
           </p>
         )}
 
@@ -556,9 +637,16 @@ function ExamPage({
             </nav>
 
             <p className="exam-demo-note">
-              Demonstration mode: answers are held in React
-              state and are not saved to a server.
+              Demonstration mode: answers are held in React state
+              and are not saved to a server.
             </p>
+
+            {exam.policy?.recordFullscreenInterruptions && (
+              <p className="exam-demo-note">
+                Fullscreen events recorded: {fullscreenEvents.length}.
+                An interruption alone does not establish misconduct.
+              </p>
+            )}
           </section>
 
           <aside className="exam-sidebar">
@@ -568,16 +656,12 @@ function ExamPage({
 
                 <span
                   className={
-                    cameraStream &&
-                    cameraStatus === "ready"
+                    isCameraReady
                       ? "status-pill status-pill--success"
                       : "status-pill status-pill--warning"
                   }
                 >
-                  {cameraStream &&
-                  cameraStatus === "ready"
-                    ? "Active"
-                    : "Not available"}
+                  {isCameraReady ? "Active" : "Not available"}
                 </span>
               </div>
 
@@ -586,14 +670,14 @@ function ExamPage({
                   <CameraPreview stream={cameraStream} />
 
                   <p className="exam-sidebar-card__note">
-                    Your camera preview remains visible. This
-                    implementation does not record or upload video.
+                    Live preview only. This implementation does
+                    not record or upload video.
                   </p>
                 </>
               ) : (
                 <p className="exam-message exam-message--error">
-                  The camera stream is unavailable. The examination
-                  timer continues running.
+                  The camera stream is unavailable. The exam timer
+                  continues running.
                 </p>
               )}
             </section>
@@ -620,8 +704,7 @@ function ExamPage({
               </div>
 
               <p className="exam-sidebar-card__note">
-                Use Previous and Next to review your answers.
-                Selections are preserved when you navigate.
+                Previous and Next preserve each selected answer.
               </p>
             </section>
           </aside>
