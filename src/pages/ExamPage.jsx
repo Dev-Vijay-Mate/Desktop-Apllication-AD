@@ -80,30 +80,41 @@ function ExamPage({
 
   const {
     remainingSeconds,
-    isRunning,
     start: startTimer,
     stop: stopTimer,
     reset: resetTimer,
-  } = useExamTimer({
-    durationSeconds,
-    onExpire: handleTimerExpiration,
+    } = useExamTimer({
+      durationSeconds,
+      onExpire: handleTimerExpiration,
   });
 
   /*
    * Load the exam from the service. Cleanup prevents an old
    * asynchronous load from updating an unmounted component.
    */
-  useEffect(() => {
-    let cancelled = false;
+useEffect(() => {
+  let cancelled = false;
 
-    stopTimer();
-    resetTimer(durationSeconds);
+  async function initialiseExam() {
+    try {
+      const loadedExam = await loadExam();
 
-    async function initialiseExam() {
-      setLoadStatus("loading");
+      if (cancelled) {
+        return;
+      }
+
+      if (
+        !loadedExam ||
+        !Array.isArray(loadedExam.questions)
+      ) {
+        throw new Error(
+          "The examination service returned invalid question data."
+        );
+      }
+
       setLoadError("");
       setSubmissionError("");
-      setExam(null);
+      setExam(loadedExam);
 
       setAnswers({});
       setCurrentIndex(0);
@@ -116,64 +127,44 @@ function ExamPage({
       submissionLockRef.current = false;
       startedAtRef.current = null;
 
-      try {
-        const loadedExam = await loadExam();
-
-        if (cancelled) {
-          return;
-        }
-
-        if (
-          !loadedExam ||
-          !Array.isArray(loadedExam.questions)
-        ) {
-          throw new Error(
-            "The examination service returned invalid question data."
-          );
-        }
-
-        setExam(loadedExam);
-
-        if (loadedExam.questions.length === 0) {
-          setLoadStatus("empty");
-          return;
-        }
-
-        startedAtRef.current = new Date().toISOString();
-        setLoadStatus("ready");
-
-        resetTimer(
-          loadedExam.durationSeconds ?? durationSeconds
-        );
-
-        startTimer();
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        setLoadError(
-          error?.message ||
-          "The examination questions could not be loaded."
-        );
-
-        setLoadStatus("error");
+      if (loadedExam.questions.length === 0) {
+        setLoadStatus("empty");
+        return;
       }
+
+      startedAtRef.current = new Date().toISOString();
+
+      resetTimer(
+        loadedExam.durationSeconds ?? durationSeconds
+      );
+
+      setLoadStatus("ready");
+      startTimer();
+    } catch (error) {
+      if (cancelled) {
+        return;
+      }
+
+      setLoadError(
+        error?.message ||
+        "The examination questions could not be loaded."
+      );
+
+      setLoadStatus("error");
     }
+  }
 
-    void initialiseExam();
+  void initialiseExam();
 
-    return () => {
-      cancelled = true;
-      stopTimer();
-    };
-  }, [
-    loadAttempt,
-    durationSeconds,
-    resetTimer,
-    startTimer,
-    stopTimer,
-  ]);
+  return () => {
+    cancelled = true;
+  };
+}, [
+  loadAttempt,
+  durationSeconds,
+  resetTimer,
+  startTimer,
+]);
 
   const questions = Array.isArray(exam?.questions)
     ? exam.questions
