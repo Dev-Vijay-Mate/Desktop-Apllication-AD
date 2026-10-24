@@ -13,9 +13,12 @@ const CHANNELS = {
   setFullscreen: "athena:fullscreen:set",
   getFullscreen: "athena:fullscreen:get",
   fullscreenChanged: "athena:fullscreen:changed",
+  setExamMode: "athena:exam-mode:set",
 };
 
 let mainWindow = null;
+let isExamMode = false;
+let quitRequested = false;
 
 /*
  * Only trust the URL that belongs to Athena.
@@ -305,6 +308,39 @@ function registerIpcHandlers() {
       return confirmed;
     }
   );
+
+  ipcMain.handle(
+    CHANNELS.setExamMode,
+    (event, enabled = false) => {
+      if (!isTrustedIpcSender(event)) {
+        return false;
+      }
+
+      if (typeof enabled !== "boolean") {
+        return false;
+      }
+
+      const win = mainWindow;
+
+      try {
+        isExamMode = enabled;
+        win.setKiosk(enabled);
+
+        if (enabled) {
+          win.setFullScreen(true);
+          win.focus();
+        } else {
+          win.setFullScreen(false);
+        }
+
+        return true;
+      } catch (error) {
+        isExamMode = false;
+        console.error("Failed to change exam mode:", error);
+        return false;
+      }
+    }
+  );
 }
 
 /*
@@ -399,8 +435,15 @@ function createWindow() {
   mainWindow.on("enter-full-screen", sendFullscreenState);
   mainWindow.on("leave-full-screen", sendFullscreenState);
 
+  mainWindow.on("close", (event) => {
+    if (isExamMode && !quitRequested) {
+      event.preventDefault();
+    }
+  });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
+    isExamMode = false;
   });
 
   /*
@@ -458,6 +501,10 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+});
+
+app.on("before-quit", () => {
+  quitRequested = true;
 });
 
 app.on("window-all-closed", () => {

@@ -170,55 +170,6 @@
 }
 
 /* =========================
-   Answered progress
-========================= */
-
-.exam-progress {
-  display: flex;
-  flex-direction: column;
-  gap: var(--athena-space-3);
-
-  padding: var(--athena-space-5);
-
-  background: var(--athena-color-surface);
-  border: 1px solid var(--athena-color-border);
-  border-radius: var(--athena-radius-control);
-}
-
-.exam-progress__labels {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--athena-space-3);
-
-  color: var(--athena-color-text-muted);
-  font-size: var(--athena-font-size-sm);
-}
-
-.exam-progress__labels strong {
-  color: var(--athena-color-text);
-  font-weight: 700;
-}
-
-.exam-progress__track {
-  width: 100%;
-  height: 7px;
-  overflow: hidden;
-
-  border-radius: var(--athena-radius-pill);
-  background: var(--athena-color-neutral-bg);
-}
-
-.exam-progress__fill {
-  height: 100%;
-
-  border-radius: inherit;
-  background: var(--athena-color-primary);
-
-  transition: width 180ms ease;
-}
-
-/* =========================
    Question card
 ========================= */
 

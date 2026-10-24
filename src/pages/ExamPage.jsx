@@ -66,6 +66,7 @@ function ExamPage({
 
   const [fullscreenEvents, setFullscreenEvents] = useState([]);
   const [fullscreenNotice, setFullscreenNotice] = useState("");
+  const [examModeError, setExamModeError] = useState("");
 
   const submissionLockRef = useRef(false);
   const submissionHandlerRef = useRef(null);
@@ -311,6 +312,44 @@ useEffect(() => {
     exam?.policy?.recordFullscreenInterruptions,
   ]);
 
+  useEffect(() => {
+    if (loadStatus !== "ready") {
+      return undefined;
+    }
+
+    const setExamMode = window.electronAPI?.setExamMode;
+
+    if (typeof setExamMode !== "function") {
+      setExamModeError(
+        "Protected exam mode is unavailable in this environment."
+      );
+      return undefined;
+    }
+
+    let active = true;
+
+    setExamMode(true).then((enabled) => {
+      if (active && enabled !== true) {
+        setExamModeError(
+          "Athena could not secure the exam window. " +
+          "Please return to setup and try again."
+        );
+      }
+    }).catch(() => {
+      if (active) {
+        setExamModeError(
+          "Athena could not secure the exam window. " +
+          "Please return to setup and try again."
+        );
+      }
+    });
+
+    return () => {
+      active = false;
+      void setExamMode(false);
+    };
+  }, [loadStatus]);
+
   /*
    * One submission handler serves manual submission and timer expiry.
    */
@@ -547,6 +586,15 @@ useEffect(() => {
           </p>
         )}
 
+        {examModeError && (
+          <p
+            className="exam-message exam-message--error"
+            role="alert"
+          >
+            {examModeError}
+          </p>
+        )}
+
         {fullscreenNotice && (
           <p
             className="exam-message exam-message--info exam-policy-notice"
@@ -558,33 +606,6 @@ useEffect(() => {
 
         <div className="exam-layout">
           <section className="exam-main">
-            <div className="exam-progress">
-              <div className="exam-progress__labels">
-                <span>Exam progress</span>
-
-                <strong>
-                  {answeredCount} / {totalQuestions} answered
-                </strong>
-              </div>
-
-              <div
-                className="exam-progress__track"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={totalQuestions}
-                aria-valuenow={answeredCount}
-                aria-label="Questions answered"
-              >
-                <div
-                  className="exam-progress__fill"
-                  style={{
-                    width:
-                      `${(answeredCount / totalQuestions) * 100}%`,
-                  }}
-                />
-              </div>
-            </div>
-
             <QuestionCard
               question={currentQuestion}
               questionNumber={currentQuestionNumber}

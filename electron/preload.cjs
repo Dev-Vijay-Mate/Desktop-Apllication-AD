@@ -7,6 +7,7 @@ const CHANNELS = {
   setFullscreen: "athena:fullscreen:set",
   getFullscreen: "athena:fullscreen:get",
   fullscreenChanged: "athena:fullscreen:changed",
+  setExamMode: "athena:exam-mode:set",
 };
 
 /*
@@ -36,6 +37,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
    */
   getFullScreenState: () =>
     ipcRenderer.invoke(CHANNELS.getFullscreen),
+
+  setExamMode: (enabled) => {
+    if (typeof enabled !== "boolean") {
+      return Promise.resolve(false);
+    }
+
+    return ipcRenderer.invoke(CHANNELS.setExamMode, enabled);
+  },
 
   /*
    * Subscribe to state changes.

@@ -16,7 +16,7 @@ and a local demonstration completion screen.
 - Multiple-choice demonstration questions.
 - Previous and Next navigation.
 - Answers preserved across question navigation.
-- Countdown timer displayed as HH:MM.
+- Countdown timer displayed as HH:MM:SS.
 - Manual submission confirmation.
 - Automatic submission processing when the countdown expires.
 - Duplicate-submission protection within the active renderer session.
@@ -44,27 +44,19 @@ requires them.
 
 ## Development
 
-Run these commands in two separate Terminal windows.
-
-Terminal 1 — start the Vite renderer:
-
-    npm run dev
-
-Terminal 2 — start Electron:
+Start both the Vite renderer and Electron window with:
 
     npm start
 
-The development Electron window expects the Vite server at:
+The development Electron window uses:
 
     http://localhost:5173/
 
-Start Vite before launching Electron.
+To run only the renderer during UI development, use:
+
+    npm run dev
 
 ## Lint and build
-
-Run ESLint:
-
-    npm run lint
 
 Create a production build of the Vite renderer:
 
@@ -73,6 +65,10 @@ Create a production build of the Vite renderer:
 Preview the Vite build:
 
     npm run preview
+
+Check Electron source syntax:
+
+    find electron -name '*.cjs' -print0 | xargs -0 -n1 node --check
 
 The Vite build command does not, by itself, package the Electron
 application or create a distributable desktop installer. A separate
@@ -145,7 +141,7 @@ packaging workflow would be required for release builds.
   Validates questions and processes local demonstration submissions.
 
 - src/utils/formatTime.js
-  Formats remaining seconds as HH:MM.
+  Formats remaining seconds as HH:MM:SS.
 
 ### Styles
 

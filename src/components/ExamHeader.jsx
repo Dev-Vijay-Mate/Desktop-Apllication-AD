@@ -56,6 +56,7 @@ function ExamHeader({
                 : "",
             ].filter(Boolean).join(" ")}
             aria-label={`Time remaining ${formattedTime}`}
+            aria-live="polite"
           >
             {formattedTime}
           </strong>
@@ -86,7 +87,7 @@ function ExamHeader({
             ? "Submitting..."
             : submissionError
               ? "Retry Submission"
-              : "Submit Exam"}
+              : "Finish Test"}
         </button>
       </div>
     </header>
