@@ -12,6 +12,7 @@
     "start": "concurrently -k \"npm run dev\" \"wait-on http://localhost:5173 && npm run electron\"",
     "build": "vite build",
     "dist:web": "npm run build && ditto -c -k --sequesterRsrc --keepParent dist Athena-Examination-web.zip",
+    "dist:web:dmg": "npm run build && hdiutil create -volname \"Athena Examination\" -srcfolder dist -ov -format UDZO \"Athena-Examination-web.dmg\"",
     "preview": "vite preview --host localhost --port 4173 --strictPort",
     "dist:mac": "npm run build && electron-builder --mac dmg --arm64"
   },

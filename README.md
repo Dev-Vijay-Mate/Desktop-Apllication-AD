@@ -75,6 +75,14 @@ runs in a browser rather than as a standalone Electron desktop app;
 browser fullscreen permissions and camera access are handled by the
 browser.
 
+Create the same lightweight browser build as a macOS disk image:
+
+    npm run dist:web:dmg
+
+This creates `Athena-Examination-web.dmg` in the project root. It is
+under 50 MB because it contains the browser build rather than the
+Electron runtime.
+
 Build an unsigned Apple Silicon macOS DMG:
 
     npm run dist:mac
