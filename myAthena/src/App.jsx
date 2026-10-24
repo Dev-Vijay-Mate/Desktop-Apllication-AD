@@ -4,6 +4,7 @@ import "./styles/global.css";
 
 import PreflightPage from "./pages/PreflightPage.jsx";
 import ExamPage from "./pages/ExamPage.jsx";
+import ResultPage from "./pages/ResultPage.jsx";
 
 import useCamera from "./hooks/useCamera.js";
 
@@ -11,24 +12,36 @@ function App() {
   const [currentScreen, setCurrentScreen] =
     useState("preflight");
 
+  const [submissionResult, setSubmissionResult] =
+    useState(null);
+
   /*
-   * App owns the camera so the stream survives the transition
-   * from PreflightPage to ExamPage.
+   * App owns the camera so its stream survives the setup-to-exam
+   * transition.
    */
   const camera = useCamera();
 
   function handleStartExam() {
+    setSubmissionResult(null);
     setCurrentScreen("exam");
   }
 
-  function handleExamComplete() {
-    // Release the camera when the exam has been submitted.
+  function handleExamComplete(result) {
+    /*
+     * This callback runs only after the exam service returns
+     * a result that the app can route to the result page.
+     */
     camera.stopCamera();
+
+    setSubmissionResult(result);
+    setCurrentScreen("result");
   }
 
   function handleReturnToSetup() {
-    // Ensure the camera is released before returning to setup.
+    // Ensure no camera tracks remain active after leaving the exam.
     camera.stopCamera();
+
+    setSubmissionResult(null);
     setCurrentScreen("preflight");
   }
 
@@ -41,11 +54,20 @@ function App() {
     );
   }
 
+  if (currentScreen === "exam") {
+    return (
+      <ExamPage
+        cameraStream={camera.stream}
+        cameraStatus={camera.status}
+        onComplete={handleExamComplete}
+        onReturnToSetup={handleReturnToSetup}
+      />
+    );
+  }
+
   return (
-    <ExamPage
-      cameraStream={camera.stream}
-      cameraStatus={camera.status}
-      onComplete={handleExamComplete}
+    <ResultPage
+      result={submissionResult}
       onReturnToSetup={handleReturnToSetup}
     />
   );
