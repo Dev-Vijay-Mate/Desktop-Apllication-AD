@@ -67,6 +67,7 @@ function ExamPage({
   const [fullscreenEvents, setFullscreenEvents] = useState([]);
   const [fullscreenNotice, setFullscreenNotice] = useState("");
   const [examModeError, setExamModeError] = useState("");
+  const [isWindowActive, setIsWindowActive] = useState(true);
 
   const submissionLockRef = useRef(false);
   const submissionHandlerRef = useRef(null);
@@ -177,10 +178,22 @@ useEffect(() => {
   const currentQuestionNumber =
     totalQuestions > 0 ? currentIndex + 1 : 0;
 
-  const answeredCount = questions.filter((question) =>
-    question.options.some(
-      (option) => option.id === answers[question.id]
+  function getSelectedOptionId(question) {
+    const selectedOptionId = answers[question.id];
+
+    return question.options.some(
+      (option) => option.id === selectedOptionId
     )
+      ? selectedOptionId
+      : "";
+  }
+
+  function isQuestionAnswered(question) {
+    return getSelectedOptionId(question) !== "";
+  }
+
+  const answeredCount = questions.filter((question) =>
+    isQuestionAnswered(question)
   ).length;
 
   const unansweredCount =
@@ -192,6 +205,33 @@ useEffect(() => {
     cameraStream.getVideoTracks().some(
       (track) => track.readyState === "live"
     );
+
+  useEffect(() => {
+    function updateWindowActivity() {
+      setIsWindowActive(
+        document.visibilityState === "visible" &&
+        document.hasFocus()
+      );
+    }
+
+    updateWindowActivity();
+
+    window.addEventListener("focus", updateWindowActivity);
+    window.addEventListener("blur", updateWindowActivity);
+    document.addEventListener(
+      "visibilitychange",
+      updateWindowActivity
+    );
+
+    return () => {
+      window.removeEventListener("focus", updateWindowActivity);
+      window.removeEventListener("blur", updateWindowActivity);
+      document.removeEventListener(
+        "visibilitychange",
+        updateWindowActivity
+      );
+    };
+  }, []);
 
   /*
    * Record fullscreen changes only while an exam is active and
@@ -595,6 +635,16 @@ useEffect(() => {
           </p>
         )}
 
+        {!isWindowActive && (
+          <p
+            className="exam-message exam-message--error"
+            role="alert"
+          >
+            Athena is not the active window. Return to the exam
+            window to continue.
+          </p>
+        )}
+
         {fullscreenNotice && (
           <p
             className="exam-message exam-message--info exam-policy-notice"
@@ -611,7 +661,7 @@ useEffect(() => {
               questionNumber={currentQuestionNumber}
               selectedOptionId={
                 currentQuestion
-                  ? answers[currentQuestion.id] ?? ""
+                  ? getSelectedOptionId(currentQuestion)
                   : ""
               }
               onAnswerChange={handleAnswerChange}
@@ -668,12 +718,18 @@ useEffect(() => {
 
                 <span
                   className={
-                    isCameraReady
+                    !isWindowActive
+                      ? "status-pill status-pill--danger"
+                      : isCameraReady
                       ? "status-pill status-pill--success"
                       : "status-pill status-pill--warning"
                   }
                 >
-                  {isCameraReady ? "Active" : "Not available"}
+                  {!isWindowActive
+                    ? "Window inactive"
+                    : isCameraReady
+                      ? "Active"
+                      : "Not available"}
                 </span>
               </div>
 
@@ -692,6 +748,67 @@ useEffect(() => {
                   continues running.
                 </p>
               )}
+            </section>
+
+            <section className="exam-sidebar-card exam-question-nav">
+              <div className="exam-sidebar-card__heading">
+                <h2>Question navigator</h2>
+
+                <span className="exam-question-nav__count">
+                  {answeredCount}/{totalQuestions}
+                </span>
+              </div>
+
+              <p className="exam-sidebar-card__note">
+                Select a question to jump directly to it.
+              </p>
+
+              <div
+                className="exam-question-nav__grid"
+                role="group"
+                aria-label="Question navigator"
+              >
+                {questions.map((question, index) => {
+                  const answered = isQuestionAnswered(question);
+                  const isCurrent = index === currentIndex;
+
+                  return (
+                    <button
+                      type="button"
+                      className={[
+                        "exam-question-nav__button",
+                        isCurrent
+                          ? "exam-question-nav__button--current"
+                          : "",
+                        answered
+                          ? "exam-question-nav__button--answered"
+                          : "",
+                      ].filter(Boolean).join(" ")}
+                      aria-current={isCurrent ? "step" : undefined}
+                      aria-label={[
+                        `Go to question ${index + 1}`,
+                        answered ? "answered" : "not answered",
+                        isCurrent ? "current question" : "",
+                      ].filter(Boolean).join(", ")}
+                      onClick={() => setCurrentIndex(index)}
+                      disabled={isSubmitting}
+                    >
+                      {index + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="exam-question-nav__legend">
+                <span>
+                  <i className="exam-question-nav__dot exam-question-nav__dot--answered" />
+                  Answered
+                </span>
+                <span>
+                  <i className="exam-question-nav__dot" />
+                  Unanswered
+                </span>
+              </div>
             </section>
 
             <section className="exam-sidebar-card">
