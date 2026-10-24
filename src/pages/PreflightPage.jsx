@@ -38,6 +38,39 @@ function PreflightPage({ onStartExam, camera }) {
     const electronAPI = window.electronAPI;
 
     if (
+      typeof electronAPI?.onFullscreenChanged !== "function" &&
+      typeof document.addEventListener === "function"
+    ) {
+      const updateBrowserFullscreen = () => {
+        if (!active) {
+          return;
+        }
+
+        const isFullscreen = Boolean(document.fullscreenElement);
+        setFullscreenStatus(isFullscreen ? "ready" : "idle");
+        setFullscreenMessage(
+          isFullscreen
+            ? "Browser confirmed that fullscreen mode is active."
+            : "Fullscreen is not active. Enable it before continuing."
+        );
+      };
+
+      document.addEventListener(
+        "fullscreenchange",
+        updateBrowserFullscreen
+      );
+      updateBrowserFullscreen();
+
+      return () => {
+        active = false;
+        document.removeEventListener(
+          "fullscreenchange",
+          updateBrowserFullscreen
+        );
+      };
+    }
+
+    if (
       typeof electronAPI?.onFullscreenChanged === "function"
     ) {
       const removeListener =
@@ -96,9 +129,9 @@ function PreflightPage({ onStartExam, camera }) {
           );
         });
     } else {
-      setFullscreenStatus("unavailable");
+      setFullscreenStatus("idle");
       setFullscreenMessage(
-        "The Electron fullscreen bridge is unavailable."
+        "Use the browser fullscreen control before continuing."
       );
     }
 
@@ -128,10 +161,33 @@ function PreflightPage({ onStartExam, camera }) {
     const electronAPI = window.electronAPI;
 
     if (typeof electronAPI?.setFullScreen !== "function") {
-      setFullscreenStatus("unavailable");
+      if (typeof document.documentElement.requestFullscreen !== "function") {
+        setFullscreenStatus("unavailable");
+        setFullscreenMessage(
+          "Fullscreen is not supported by this browser."
+        );
+        return;
+      }
+
+      setFullscreenStatus("checking");
       setFullscreenMessage(
-        "The Electron fullscreen API is unavailable."
+        "Waiting for the browser to confirm fullscreen mode."
       );
+
+      try {
+        await document.documentElement.requestFullscreen();
+        setFullscreenStatus("ready");
+        setFullscreenMessage(
+          "Browser confirmed that fullscreen mode is active."
+        );
+      } catch (error) {
+        setFullscreenStatus("error");
+        setFullscreenMessage(
+          error?.message ||
+          "The browser could not enable fullscreen mode."
+        );
+      }
+
       return;
     }
 

@@ -363,10 +363,12 @@ useEffect(() => {
     const setExamMode = window.electronAPI?.setExamMode;
 
     if (typeof setExamMode !== "function") {
-      setExamModeError(
-        "Protected exam mode is unavailable in this environment."
-      );
-      return undefined;
+      setExamModeError("");
+      return () => {
+        if (document.fullscreenElement) {
+          void document.exitFullscreen?.();
+        }
+      };
     }
 
     let active = true;

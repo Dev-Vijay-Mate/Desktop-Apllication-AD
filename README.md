@@ -66,6 +66,15 @@ Preview the Vite build:
 
     npm run preview
 
+Create the browser build for delivery under a 50 MB limit:
+
+    npm run dist:web
+
+This creates `Athena-Examination-web.zip` in the project root. It
+runs in a browser rather than as a standalone Electron desktop app;
+browser fullscreen permissions and camera access are handled by the
+browser.
+
 Build an unsigned Apple Silicon macOS DMG:
 
     npm run dist:mac
