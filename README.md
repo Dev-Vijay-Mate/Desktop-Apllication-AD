@@ -66,6 +66,15 @@ Preview the Vite build:
 
     npm run preview
 
+Build an unsigned Apple Silicon macOS DMG:
+
+    npm run dist:mac
+
+The installer is created in the `dist/` directory. The DMG is
+unsigned unless a valid Apple Developer signing identity is
+configured on the build machine, so macOS may require the user to
+approve it in Privacy & Security before opening it.
+
 Check Electron source syntax:
 
     find electron -name '*.cjs' -print0 | xargs -0 -n1 node --check

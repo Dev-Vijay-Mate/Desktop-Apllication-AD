@@ -1,6 +1,9 @@
 {
   "name": "myathena",
   "version": "1.0.0",
+  "description": "Athena desktop examination application",
+  "author": "Athena",
+  "main": "electron/main.cjs",
   "license": "ISC",
   "type": "commonjs",
   "scripts": {
@@ -8,7 +11,8 @@
     "electron": "electron electron/main.cjs",
     "start": "concurrently -k \"npm run dev\" \"wait-on http://localhost:5173 && npm run electron\"",
     "build": "vite build",
-    "preview": "vite preview --host localhost --port 4173 --strictPort"
+    "preview": "vite preview --host localhost --port 4173 --strictPort",
+    "dist:mac": "npm run build && electron-builder --mac dmg --arm64"
   },
   "dependencies": {
     "react": "^19.1.1",
@@ -18,6 +22,36 @@
     "concurrently": "^9.2.1",
     "electron": "^44.9.3",
     "vite": "^7.1.7",
+    "electron-builder": "^26.0.12",
     "wait-on": "^8.0.4"
+  },
+  "build": {
+    "appId": "com.athena.exam",
+    "productName": "Athena Examination",
+    "asar": true,
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.education",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "Athena Examination",
+      "backgroundColor": "#f4f7f5",
+      "window": {
+        "width": 540,
+        "height": 360
+      }
+    }
   }
 }
