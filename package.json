@@ -30,7 +30,8 @@
     "productName": "Athena Examination",
     "asar": true,
     "files": [
-      "dist/**/*",
+      "dist/index.html",
+      "dist/assets/**/*",
       "electron/**/*",
       "package.json"
     ],
