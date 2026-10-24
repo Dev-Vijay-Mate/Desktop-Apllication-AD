@@ -286,6 +286,117 @@
 }
 
 /* =========================
+   Readiness checklist
+========================= */
+
+.readiness-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--athena-space-4);
+
+  padding: clamp(1.1rem, 2.5vw, 1.5rem);
+
+  background: var(--athena-color-surface);
+  border: 1px solid var(--athena-color-border);
+  border-radius: var(--athena-radius-card);
+  box-shadow: var(--athena-shadow-card);
+}
+
+.readiness-checklist__heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--athena-space-4);
+}
+
+.readiness-checklist__eyebrow {
+  margin: 0 0 var(--athena-space-1);
+
+  color: var(--athena-color-text-muted);
+  font-size: var(--athena-font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.readiness-checklist h2 {
+  margin: 0;
+
+  color: var(--athena-color-text);
+  font-size: var(--athena-font-size-lg);
+  font-weight: 700;
+}
+
+.readiness-checklist__items {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--athena-space-3);
+
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.readiness-checklist__item {
+  min-width: 0;
+
+  display: flex;
+  align-items: flex-start;
+  gap: var(--athena-space-3);
+
+  padding: var(--athena-space-3);
+
+  background: var(--athena-color-surface-muted);
+  border: 1px solid var(--athena-color-border);
+  border-radius: var(--athena-radius-control);
+}
+
+.readiness-checklist__item--ready {
+  background: var(--athena-color-success-bg);
+  border-color: #cee8d7;
+}
+
+.readiness-checklist__indicator {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  background: var(--athena-color-warning-bg);
+  color: var(--athena-color-warning);
+  font-size: var(--athena-font-size-xs);
+  font-weight: 800;
+}
+
+.readiness-checklist__item--ready .readiness-checklist__indicator {
+  background: var(--athena-color-success);
+  color: #ffffff;
+}
+
+.readiness-checklist__copy {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.readiness-checklist__copy strong {
+  color: var(--athena-color-text);
+  font-size: var(--athena-font-size-sm);
+}
+
+.readiness-checklist__copy span {
+  color: var(--athena-color-text-muted);
+  font-size: var(--athena-font-size-xs);
+  line-height: 1.5;
+}
+
+/* =========================
    Buttons
 ========================= */
 
@@ -525,6 +636,14 @@
   .preflight-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .readiness-checklist__heading {
+    flex-direction: column;
+  }
+
+  .readiness-checklist__items {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .preflight-actions .button {

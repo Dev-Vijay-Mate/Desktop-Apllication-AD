@@ -233,6 +233,30 @@ function PreflightPage({ onStartExam, camera }) {
     error: "danger",
   }[fullscreenStatus] ?? "neutral";
 
+  const readinessItems = [
+    {
+      label: "Camera access",
+      detail: isCameraReady
+        ? "Camera connected and ready."
+        : "Camera access is required.",
+      ready: isCameraReady,
+    },
+    {
+      label: "Fullscreen mode",
+      detail: fullscreenStatus === "ready"
+        ? "Fullscreen is confirmed."
+        : "Fullscreen must be confirmed before starting.",
+      ready: fullscreenStatus === "ready",
+    },
+    {
+      label: "Exam readiness",
+      detail: setupReady
+        ? "All required checks are complete."
+        : "Complete the remaining checks to continue.",
+      ready: setupReady,
+    },
+  ];
+
   return (
     <main className="preflight-page">
       <div className="preflight-shell">
@@ -322,6 +346,58 @@ function PreflightPage({ onStartExam, camera }) {
                 : "info"
             }
           />
+        </section>
+
+        <section
+          className="readiness-checklist"
+          aria-labelledby="readiness-checklist-title"
+        >
+          <div className="readiness-checklist__heading">
+            <div>
+              <p className="readiness-checklist__eyebrow">
+                Before you begin
+              </p>
+
+              <h2 id="readiness-checklist-title">
+                Readiness checklist
+              </h2>
+            </div>
+
+            <span
+              className={
+                setupReady
+                  ? "status-pill status-pill--success"
+                  : "status-pill status-pill--warning"
+              }
+            >
+              {setupReady ? "Ready to begin" : "Action required"}
+            </span>
+          </div>
+
+          <ul className="readiness-checklist__items">
+            {readinessItems.map((item) => (
+              <li
+                className={
+                  item.ready
+                    ? "readiness-checklist__item readiness-checklist__item--ready"
+                    : "readiness-checklist__item"
+                }
+                key={item.label}
+              >
+                <span
+                  className="readiness-checklist__indicator"
+                  aria-hidden="true"
+                >
+                  {item.ready ? "✓" : "!"}
+                </span>
+
+                <span className="readiness-checklist__copy">
+                  <strong>{item.label}</strong>
+                  <span>{item.detail}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {pageNotice && (

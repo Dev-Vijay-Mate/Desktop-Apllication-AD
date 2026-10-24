@@ -344,6 +344,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+.exam-answer-save-status {
+  margin: calc(var(--athena-space-2) * -1) 0 0;
+
+  color: var(--athena-color-text-muted);
+  font-size: var(--athena-font-size-xs);
+  line-height: 1.5;
+}
+
 /* =========================
    Sidebar
 ========================= */

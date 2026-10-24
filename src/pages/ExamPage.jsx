@@ -63,6 +63,8 @@ function ExamPage({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState("");
+  const [answerSaveStatus, setAnswerSaveStatus] =
+    useState("not-started");
 
   const [fullscreenEvents, setFullscreenEvents] = useState([]);
   const [fullscreenNotice, setFullscreenNotice] = useState("");
@@ -116,6 +118,7 @@ useEffect(() => {
 
       setLoadError("");
       setSubmissionError("");
+      setAnswerSaveStatus("not-started");
       setExam(loadedExam);
 
       setAnswers({});
@@ -465,6 +468,7 @@ useEffect(() => {
       ...currentAnswers,
       [questionId]: optionId,
     }));
+    setAnswerSaveStatus("saved");
   }
 
   function goToPreviousQuestion() {
@@ -688,6 +692,16 @@ useEffect(() => {
                 Next →
               </button>
             </nav>
+
+            <p
+              className="exam-answer-save-status"
+              role="status"
+              aria-live="polite"
+            >
+              {answerSaveStatus === "saved"
+                ? "Answer saved for this session. It has not been sent to a server."
+                : "Select an answer to save it for this session."}
+            </p>
 
           </section>
 
