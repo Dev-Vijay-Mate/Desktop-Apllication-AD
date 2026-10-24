@@ -787,3 +787,105 @@
     animation: none;
   }
 }
+
+/* =========================
+   Completion audit log
+========================= */
+
+.exam-audit-section {
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--athena-space-3);
+
+  padding-top: var(--athena-space-5);
+  border-top: 1px solid var(--athena-color-border);
+
+  text-align: left;
+}
+
+.exam-audit-section h2 {
+  margin: 0;
+
+  color: var(--athena-color-text);
+  font-size: var(--athena-font-size-lg);
+  font-weight: 700;
+}
+
+.exam-audit-section > p {
+  margin: 0;
+
+  color: var(--athena-color-text-muted);
+  font-size: var(--athena-font-size-sm);
+  line-height: 1.65;
+}
+
+.exam-audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--athena-space-3);
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.exam-audit-event {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--athena-space-3);
+
+  padding: var(--athena-space-3);
+
+  background: var(--athena-color-surface-muted);
+  border: 1px solid var(--athena-color-border);
+  border-radius: var(--athena-radius-control);
+}
+
+.exam-audit-event__label {
+  color: var(--athena-color-text);
+  font-size: var(--athena-font-size-sm);
+  font-weight: 650;
+}
+
+.exam-audit-event time {
+  color: var(--athena-color-text-muted);
+  font-size: var(--athena-font-size-xs);
+  text-align: right;
+}
+
+.exam-audit-disclaimer {
+  padding: var(--athena-space-3);
+
+  background: var(--athena-color-warning-bg);
+  border: 1px solid #f0dfb8;
+  border-radius: var(--athena-radius-control);
+
+  color: var(--athena-color-warning) !important;
+  font-size: var(--athena-font-size-xs) !important;
+}
+
+.exam-result-metric__timestamp {
+  overflow-wrap: anywhere;
+  font-size: var(--athena-font-size-sm) !important;
+  line-height: 1.5;
+}
+
+.exam-policy-notice {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .exam-audit-event {
+    flex-direction: column;
+    gap: var(--athena-space-1);
+  }
+
+  .exam-audit-event time {
+    text-align: left;
+  }
+}
