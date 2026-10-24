@@ -645,15 +645,6 @@ useEffect(() => {
           </p>
         )}
 
-        {fullscreenNotice && (
-          <p
-            className="exam-message exam-message--info exam-policy-notice"
-            role="status"
-          >
-            {fullscreenNotice}
-          </p>
-        )}
-
         <div className="exam-layout">
           <section className="exam-main">
             <QuestionCard
@@ -698,17 +689,6 @@ useEffect(() => {
               </button>
             </nav>
 
-            <p className="exam-demo-note">
-              Demonstration mode: answers are held in React state
-              and are not saved to a server.
-            </p>
-
-            {exam.policy?.recordFullscreenInterruptions && (
-              <p className="exam-demo-note">
-                Fullscreen events recorded: {fullscreenEvents.length}.
-                An interruption alone does not establish misconduct.
-              </p>
-            )}
           </section>
 
           <aside className="exam-sidebar">
@@ -728,20 +708,13 @@ useEffect(() => {
                   {!isWindowActive
                     ? "Window inactive"
                     : isCameraReady
-                      ? "Active"
-                      : "Not available"}
+                      ? "Camera active"
+                      : "Camera unavailable"}
                 </span>
               </div>
 
               {cameraStream ? (
-                <>
-                  <CameraPreview stream={cameraStream} />
-
-                  <p className="exam-sidebar-card__note">
-                    Live preview only. This implementation does
-                    not record or upload video.
-                  </p>
-                </>
+                <CameraPreview stream={cameraStream} />
               ) : (
                 <p className="exam-message exam-message--error">
                   The camera stream is unavailable. The exam timer
@@ -836,6 +809,36 @@ useEffect(() => {
                 Previous and Next preserve each selected answer.
               </p>
             </section>
+
+            <details className="exam-sidebar-card exam-session-info">
+              <summary>Session information</summary>
+
+              <div className="exam-session-info__content">
+                <p>
+                  Demo session. Answers remain on this screen and
+                  are not sent to a server.
+                </p>
+
+                <p>
+                  {exam.policy?.recordFullscreenInterruptions
+                    ? `${fullscreenEvents.length} fullscreen event${
+                        fullscreenEvents.length === 1 ? "" : "s"
+                      } recorded for this session.`
+                    : "Fullscreen activity is not recorded for this session."}
+                </p>
+
+                {fullscreenNotice && (
+                  <p className="exam-session-info__notice">
+                    {fullscreenNotice}
+                  </p>
+                )}
+
+                <p>
+                  Fullscreen activity is an operational record and
+                  does not by itself indicate misconduct.
+                </p>
+              </div>
+            </details>
           </aside>
         </div>
       </div>

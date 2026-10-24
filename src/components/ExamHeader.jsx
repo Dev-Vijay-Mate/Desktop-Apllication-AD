@@ -35,7 +35,7 @@ function ExamHeader({
             }
           >
             {source === "demo"
-              ? "DEMONSTRATION EXAM"
+              ? "DEMO SESSION"
               : "EXAM"}
           </span>
         </div>

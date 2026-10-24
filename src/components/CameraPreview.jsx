@@ -52,8 +52,7 @@ function CameraPreview({ stream }) {
       />
 
       <p className="camera-preview__caption">
-        Live camera preview. This implementation does not
-        record or upload video.
+        Live camera preview. Video is not recorded or uploaded.
       </p>
     </div>
   );
